@@ -1,50 +1,87 @@
-# template-for-proposals
+# TC39 Proposal Draft: Throwing TypeError for `in` Operator on Regular Arrays
 
-A repository template for ECMAScript proposals.
+## Title
+Restricting `in` Operator Use on Regular Arrays to Prevent Common Misunderstandings
 
-## Before creating a proposal
+## Authors
+@lxe
 
-Please ensure the following:
-  1. You have read the [process document](https://tc39.github.io/process-document/)
-  1. You have reviewed the [existing proposals](https://github.com/tc39/proposals/)
-  1. You are aware that your proposal requires being a member of TC39, or locating a TC39 delegate to “champion” your proposal
+## Champions
+[To be determined]
 
-## Create your proposal repo
+## Motivation
+The `in` operator in JavaScript is widely misunderstood when applied to arrays. Many developers intuitively expect it to check for the presence of a value within an array, similar to how it checks for the presence of a property within an object. This misunderstanding can lead to bugs and confusion, as the operator actually checks for the presence of an index (property) in an array, not a value. There is little practical use for checking whether an array, especially one instantiated with the regular `[]` constructor, contains a certain property key. This proposal aims to align the behavior of the `in` operator on regular arrays more closely with developer expectations, reducing confusion and potential errors.
 
-Follow these steps:
-  1. Click the green [“use this template”](https://github.com/tc39/template-for-proposals/generate) button in the repo header. (Note: Do not fork this repo in GitHub's web interface, as that will later prevent transfer into the TC39 organization)
-  1. Update ecmarkup and the biblio to the latest version: `npm install --save-dev ecmarkup@latest && npm install --save-dev --save-exact @tc39/ecma262-biblio@latest`.
-  1. Go to your repo settings page:
-      1. Under “General”, under “Features”, ensure “Issues” is checked, and disable “Wiki”, and “Projects” (unless you intend to use Projects)
-      1. Under “Pull Requests”, check “Always suggest updating pull request branches” and “automatically delete head branches”
-      1. Under the “Pages” section on the left sidebar, and set the source to “deploy from a branch” and check “Enforce HTTPS”
-      1. Under the “Actions” section on the left sidebar, under “General”, select “Read and write permissions” under “Workflow permissions” and click “Save”
-  1. [“How to write a good explainer”][explainer] explains how to make a good first impression.
+## Description
+The proposal suggests modifying the behavior of the `in` operator such that it throws a `TypeError` when used on arrays instantiated with the regular Array constructor (`[]`). This behavior would mimic the existing behavior when the `in` operator is used on non-object types (primitives), enhancing language consistency.
 
-      > Each TC39 proposal should have a `README.md` file which explains the purpose
-      > of the proposal and its shape at a high level.
-      >
-      > ...
-      >
-      > The rest of this page can be used as a template ...
+The restriction would only apply to arrays created directly from the `Array` constructor and not affect classes derived from `Array`. This consideration ensures that custom array-like implementations with specific uses for property checking can maintain their functionality.
 
-      Your explainer can point readers to the `index.html` generated from `spec.emu`
-      via markdown like
+## Examples
 
-      ```markdown
-      You can browse the [ecmarkup output](https://ACCOUNT.github.io/PROJECT/)
-      or browse the [source](https://github.com/ACCOUNT/PROJECT/blob/HEAD/spec.emu).
-      ```
+### Current Behavior
+```javascript
+// Example demonstrating current behavior with the `in` operator on an array
+const fruits = ['apple', 'banana', 'cherry'];
 
-      where *ACCOUNT* and *PROJECT* are the first two path elements in your project's Github URL.
-      For example, for github.com/**tc39**/**template-for-proposals**, *ACCOUNT* is “tc39”
-      and *PROJECT* is “template-for-proposals”.
+console.log(1 in fruits);
+// Expected output: true
+// Explanation: This returns true because there is an element at index 1 in the array.
 
+console.log('banana' in fruits);
+// Expected output: false
+// Explanation: Misleadingly returns false because 'banana' is searched for as a key (index), not a value.
 
-## Maintain your proposal repo
+console.log(3 in fruits);
+// Expected output: false
+// Explanation: Returns false correctly since there is no element at index 3.
 
-  1. Make your changes to `spec.emu` (ecmarkup uses HTML syntax, but is not HTML, so I strongly suggest not naming it “.html”)
-  1. Any commit that makes meaningful changes to the spec, should run `npm run build` to verify that the build will succeed and the output looks as expected.
-  1. Whenever you update `ecmarkup`, run `npm run build` to verify that the build will succeed and the output looks as expected.
+// Demonstrating with an array containing numeric values
+console.log(1 in [3, 4, 5]);
+// Expected output: true
+// Explanation: True because there is an index 1, despite the intuitive expectation to check for the presence of the value 1.
+```
 
-  [explainer]: https://github.com/tc39/how-we-work/blob/HEAD/explainer.md
+### Proposed Change
+With the proposed change, using the `in` operator on arrays instantiated with the regular Array constructor (`[]`) would throw a `TypeError`, as shown in the revised examples below:
+
+```javascript
+const fruits = ['apple', 'banana', 'cherry'];
+
+// The following would throw a TypeError under the proposed change:
+console.log(1 in fruits);
+// Throws TypeError: Cannot use 'in' operator on a regular array
+
+console.log('banana' in fruits);
+// Throws TypeError: Cannot use 'in' operator on a regular array
+
+console.log(3 in fruits);
+// Throws TypeError: Cannot use 'in' operator on a regular array
+
+// This also applies to arrays with numeric values
+console.log(1 in [3, 4, 5]);
+// Throws TypeError: Cannot use 'in' operator on a regular array
+```
+
+## Comparison with Primitive Behavior
+The proposal aligns the behavior of the `in` operator on regular arrays with its behavior on primitives, where attempting to use the `in` operator throws a `TypeError`.
+
+## FAQ
+
+- **Q: Will this change break existing code?**
+  A: This change is targeted to reduce confusion for new and existing code, aligning with developer expectations. It's narrowly scoped to regular arrays to minimize potential breaks in existing codebases.
+
+- **Q: Why not apply this change to all array-like objects?**
+  A: Custom array-like objects and classes extending from `Array` may have legitimate uses for property checks that this proposal aims to preserve.
+
+## Alternatives Considered
+- **Educating Developers**: Enhancing documentation and linting rules to warn against common misunderstandings.
+- **Runtime Checks**: Encouraging the use of `Array.prototype.includes` for value presence checks without altering the `in` operator's behavior.
+
+## Potential Impacts and Compatibility
+This proposal may impact existing codebases that rely on the `in` operator for array property checks. A detailed compatibility assessment and migration strategy will be developed as part of the proposal refinement process.
+
+## Next Steps
+1. Gather feedback from the JavaScript community and potential champions.
+2. Refine the proposal based on input and submit it to the TC39 for consideration.
+3. Prepare for presentation and discussion in TC39 meetings.
